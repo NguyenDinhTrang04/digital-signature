@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Mã Hóa RSA - Phòng Chat An Toàn</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .result-area {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .chat-section {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .room-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .room-controls input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .chat-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .members-list {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .members-list h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .member-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .member-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .member-status {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages {
+            flex: 1;
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            background: white;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #718096;
+            font-size: 12px;
+        }
+
+        .message-author {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .message-content {
+            color: #2d3748;
+        }
+
+        .message-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input textarea {
+            flex: 1;
+            resize: none;
+            height: 60px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .status.info {
+            background: #bee3f8;
+            color: #2a4365;
+            border: 1px solid #90cdf4;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #718096;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .key-display {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            word-break: break-all;
+        }
+
+        .file-upload {
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .members-list {
+                order: 2;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Ứng Dụng Mã Hóa RSA</h1>
+            <p>Phòng chat an toàn với mã hóa RSA và ký số</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Quản lý khóa RSA -->
+            <div class="card">
+                <h2>🔑 Quản Lý Khóa RSA</h2>
+
+                <div class="form-group">
+                    <button class="btn" onclick="generateKeys()">🎲 Tạo Cặp Khóa Mới</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Khóa Công Khai (Public Key):</label>
+                    <textarea id="publicKey" rows="4" readonly
+                        placeholder="Khóa công khai sẽ hiển thị ở đây..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Khóa Riêng (Private Key):</label>
+                    <textarea id="privateKey" rows="4" readonly
+                        placeholder="Khóa riêng sẽ hiển thị ở đây..."></textarea>
+                    <small style="color: #e53e3e;">⚠️ Không chia sẻ khóa riêng với ai!</small>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-secondary" onclick="copyToClipboard('publicKey')">📋 Copy Khóa Công
+                        Khai</button>
+                    <button class="btn btn-secondary" onclick="downloadKeys()">💾 Tải Xuống Khóa</button>
+                </div>
+            </div>
+
+            <!-- Mã hóa/Giải mã -->
+            <div class="card">
+                <h2>🔒 Mã Hóa & Giải Mã</h2>
+
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('encrypt')">Mã Hóa</div>
+                    <div class="tab" onclick="switchTab('decrypt')">Giải Mã</div>
+                    <div class="tab" onclick="switchTab('sign')">Ký Số</div>
+                    <div class="tab" onclick="switchTab('verify')">Xác Minh</div>
+                </div>
+
+                <!-- Tab Mã hóa -->
+                <div id="encrypt-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label>Văn bản cần mã hóa:</label>
+                        <textarea id="textToEncrypt" rows="3" placeholder="Nhập văn bản cần mã hóa..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Khóa công khai người nhận:</label>
+                        <textarea id="recipientPublicKey" rows="3"
+                            placeholder="Dán khóa công khai của người nhận..."></textarea>
+                    </div>
+                    <button class="btn" onclick="encryptText()">🔒 Mã Hóa</button>
+                    <div class="result-area" id="encryptResult"></div>
+                </div>
+
+                <!-- Tab Giải mã -->
+                <div id="decrypt-tab" class="tab-content">
+                    <div class="form-group">
+                        <label>Văn bản đã mã hóa:</label>
+                        <textarea id="textToDecrypt" rows="3" placeholder="Dán văn bản đã mã hóa..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Khóa riêng của bạn:</label>
+                        <textarea id="decryptPrivateKey" rows="3" placeholder="Dán khóa riêng của bạn..."></textarea>
+                    </div>
+                    <button class="btn" onclick="decryptText()">🔓 Giải Mã</button>
+                    <div class="result-area" id="decryptResult"></div>
+                </div>
+
+                <!-- Tab Ký số -->
+                <div id="sign-tab" class="tab-content">
+                    <div class="form-group">
+                        <label>Văn bản cần ký:</label>
+                        <textarea id="textToSign" rows="3" placeholder="Nhập văn bản cần ký số..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Khóa riêng của bạn:</label>
+                        <textarea id="signPrivateKey" rows="3" placeholder="Dán khóa riêng của bạn..."></textarea>
+                    </div>
+                    <button class="btn" onclick="signText()">✍️ Ký Số</button>
+                    <div class="result-area" id="signResult"></div>
+                </div>
+
+                <!-- Tab Xác minh -->
+                <div id="verify-tab" class="tab-content">
+                    <div class="form-group">
+                        <label>Văn bản gốc:</label>
+                        <textarea id="textToVerify" rows="2" placeholder="Nhập văn bản gốc..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Chữ ký số:</label>
+                        <textarea id="signatureToVerify" rows="2" placeholder="Dán chữ ký số..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Khóa công khai người ký:</label>
+                        <textarea id="verifyPublicKey" rows="3" placeholder="Dán khóa công khai người ký..."></textarea>
+                    </div>
+                    <button class="btn" onclick="verifySignature()">✅ Xác Minh</button>
+                    <div class="result-area" id="verifyResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phòng Chat -->
+        <div class="chat-section">
+            <h2>💬 Phòng Chat An Toàn</h2>
+
+            <div class="room-controls">
+                <input type="text" id="username" placeholder="Tên của bạn..." />
+                <input type="text" id="roomId" placeholder="ID Phòng..." />
+                <button class="btn" onclick="joinRoom()">🚪 Tham Gia Phòng</button>
+                <button class="btn btn-danger" onclick="leaveRoom()">🚫 Rời Phòng</button>
+            </div>
+
+            <div id="chatContainer" class="chat-container hidden">
+                <div class="members-list">
+                    <h3>👥 Thành Viên</h3>
+                    <div id="membersList"></div>
+                </div>
+
+                <div class="chat-area">
+                    <div class="messages" id="messages"></div>
+
+                    <div class="message-input">
+                        <textarea id="messageText" placeholder="Nhập tin nhắn..."
+                            onkeypress="handleKeyPress(event)"></textarea>
+                        <div>
+                            <button class="btn" onclick="sendMessage()">📤 Gửi</button>
+                            <button class="btn btn-secondary" onclick="sendEncryptedMessage()">🔐 Gửi Mã Hóa</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>📁 Truyền File Mã Hóa</h2>
+
+            <div class="file-upload" id="fileUpload" ondrop="handleFileDrop(event)" ondragover="handleDragOver(event)"
+                ondragleave="handleDragLeave(event)">
+                <p>🎯 Kéo thả file vào đây hoặc click để chọn</p>
+                <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="form-group">
+                <label>Chọn người nhận:</label>
+                <select id="fileRecipient">
+                    <option value="">-- Chọn người nhận --</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="encryptAndSendFile()">🔒📤 Mã Hóa và Gửi File</button>
+
+            <div id="fileStatus" class="status hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Biến toàn cục
+        let socket = null;
+        let currentRoom = null;
+        let currentUser = null;
+        let roomMembers = {};
+
+        // Khởi tạo Socket.IO
+        function initSocket() {
+            socket = io();
+
+            socket.on('connect', function () {
+                console.log('Đã kết nối Socket.IO');
+            });
+
+            socket.on('user_joined', function (data) {
+                showStatus(`${data.username} đã tham gia phòng`, 'success');
+                roomMembers = data.members;
+                updateMembersList();
+            });
+
+            socket.on('user_left', function (data) {
+                showStatus(`${data.username} đã rời phòng`, 'info');
+                roomMembers = data.members;
+                updateMembersList();
+            });
+
+            socket.on('message_history', function (data) {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = '';
+                data.messages.forEach(message => {
+                    displayMessage(message);
+                });
+            });
+
+            socket.on('new_message', function (message) {
+                displayMessage(message);
+            });
+
+            socket.on('error', function (data) {
+                showStatus(data.message, 'error');
+            });
+        }
+
+        // Tạo cặp khóa RSA
+        async function generateKeys() {
+            try {
+                showStatus('Đang tạo cặp khóa RSA...', 'info');
+
+                const response = await fetch('/api/generate-keys', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('publicKey').value = data.public_key;
+                    document.getElementById('privateKey').value = data.private_key;
+                    showStatus('✅ Đã tạo cặp khóa RSA thành công!', 'success');
+                } else {
+                    showStatus(`❌ Lỗi: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Mã hóa văn bản
+        async function encryptText() {
+            const text = document.getElementById('textToEncrypt').value;
+            const publicKey = document.getElementById('recipientPublicKey').value;
+
+            if (!text || !publicKey) {
+                showStatus('❌ Vui lòng nhập đầy đủ thông tin', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Đang mã hóa...', 'info');
+
+                const response = await fetch('/api/encrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        public_key: publicKey
+                    })
+                });
+
+                const data = await response.json();
+
+                const resultDiv = document.getElementById('encryptResult');
+                if (data.success) {
+                    resultDiv.textContent = data.encrypted_text;
+                    showStatus('✅ Mã hóa thành công!', 'success');
+                } else {
+                    resultDiv.textContent = `Lỗi: ${data.error}`;
+                    showStatus(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Giải mã văn bản
+        async function decryptText() {
+            const encryptedText = document.getElementById('textToDecrypt').value;
+            const privateKey = document.getElementById('decryptPrivateKey').value;
+
+            if (!encryptedText || !privateKey) {
+                showStatus('❌ Vui lòng nhập đầy đủ thông tin', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Đang giải mã...', 'info');
+
+                const response = await fetch('/api/decrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        encrypted_text: encryptedText,
+                        private_key: privateKey
+                    })
+                });
+
+                const data = await response.json();
+
+                const resultDiv = document.getElementById('decryptResult');
+                if (data.success) {
+                    resultDiv.textContent = data.decrypted_text;
+                    showStatus('✅ Giải mã thành công!', 'success');
+                } else {
+                    resultDiv.textContent = `Lỗi: ${data.error}`;
+                    showStatus(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Ký số văn bản
+        async function signText() {
+            const text = document.getElementById('textToSign').value;
+            const privateKey = document.getElementById('signPrivateKey').value;
+
+            if (!text || !privateKey) {
+                showStatus('❌ Vui lòng nhập đầy đủ thông tin', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Đang ký số...', 'info');
+
+                const response = await fetch('/api/sign', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        private_key: privateKey
+                    })
+                });
+
+                const data = await response.json();
+
+                const resultDiv = document.getElementById('signResult');
+                if (data.success) {
+                    resultDiv.textContent = data.signature;
+                    showStatus('✅ Ký số thành công!', 'success');
+                } else {
+                    resultDiv.textContent = `Lỗi: ${data.error}`;
+                    showStatus(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Xác minh chữ ký số
+        async function verifySignature() {
+            const text = document.getElementById('textToVerify').value;
+            const signature = document.getElementById('signatureToVerify').value;
+            const publicKey = document.getElementById('verifyPublicKey').value;
+
+            if (!text || !signature || !publicKey) {
+                showStatus('❌ Vui lòng nhập đầy đủ thông tin', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Đang xác minh...', 'info');
+
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        signature: signature,
+                        public_key: publicKey
+                    })
+                });
+
+                const data = await response.json();
+
+                const resultDiv = document.getElementById('verifyResult');
+                if (data.success) {
+                    if (data.is_valid) {
+                        resultDiv.textContent = '✅ Chữ ký hợp lệ - Văn bản không bị thay đổi';
+                        showStatus('✅ Chữ ký hợp lệ!', 'success');
+                    } else {
+                        resultDiv.textContent = '❌ Chữ ký không hợp lệ - Văn bản có thể đã bị thay đổi';
+                        showStatus('❌ Chữ ký không hợp lệ!', 'error');
+                    }
+                } else {
+                    resultDiv.textContent = `Lỗi: ${data.error}`;
+                    showStatus(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Tham gia phòng
+        function joinRoom() {
+            const username = document.getElementById('username').value.trim();
+            const roomId = document.getElementById('roomId').value.trim();
+            const publicKey = document.getElementById('publicKey').value.trim();
+
+            if (!username || !roomId) {
+                showStatus('❌ Vui lòng nhập tên và ID phòng', 'error');
+                return;
+            }
+
+            if (!publicKey) {
+                showStatus('❌ Vui lòng tạo khóa RSA trước', 'error');
+                return;
+            }
+
+            if (!socket) {
+                initSocket();
+            }
+
+            currentRoom = roomId;
+            currentUser = username;
+
+            socket.emit('join', {
+                username: username,
+                room: roomId,
+                public_key: publicKey
+            });
+
+            document.getElementById('chatContainer').classList.remove('hidden');
+            showStatus(`Đang tham gia phòng "${roomId}"...`, 'info');
+        }
+
+        // Rời phòng
+        function leaveRoom() {
+            if (socket && currentRoom) {
+                socket.emit('leave');
+                document.getElementById('chatContainer').classList.add('hidden');
+                document.getElementById('messages').innerHTML = '';
+                document.getElementById('membersList').innerHTML = '';
+                showStatus('Đã rời phòng', 'info');
+                currentRoom = null;
+                currentUser = null;
+            }
+        }
+
+        // Gửi tin nhắn
+        function sendMessage() {
+            const messageText = document.getElementById('messageText').value.trim();
+
+            if (!messageText || !socket || !currentRoom) {
+                return;
+            }
+
+            socket.emit('send_message', {
+                type: 'text',
+                content: messageText
+            });
+
+            document.getElementById('messageText').value = '';
+        }
+
+        // Gửi tin nhắn mã hóa
+        async function sendEncryptedMessage() {
+            const messageText = document.getElementById('messageText').value.trim();
+
+            if (!messageText || !socket || !currentRoom) {
+                return;
+            }
+
+            // Mã hóa cho tất cả thành viên trong phòng
+            const encryptedMessages = {};
+
+            for (const [userId, member] of Object.entries(roomMembers)) {
+                try {
+                    const response = await fetch('/api/encrypt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: messageText,
+                            public_key: member.public_key
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        encryptedMessages[userId] = data.encrypted_text;
+                    }
+                } catch (error) {
+                    console.error('Lỗi mã hóa cho', member.username, error);
+                }
+            }
+
+            socket.emit('send_message', {
+                type: 'encrypted',
+                content: {
+                    original: messageText,
+                    encrypted: encryptedMessages
+                }
+            });
+
+            document.getElementById('messageText').value = '';
+        }
+
+        // Hiển thị tin nhắn
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+
+            const time = new Date(message.timestamp).toLocaleTimeString();
+
+            let content = '';
+            if (message.type === 'encrypted') {
+                content = `🔐 [Tin nhắn mã hóa] ${message.content.original || 'Nội dung được mã hóa'}`;
+            } else {
+                content = message.content;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-author">${message.username}</span>
+                    <span>${time}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Cập nhật danh sách thành viên
+        function updateMembersList() {
+            const membersList = document.getElementById('membersList');
+            const fileRecipient = document.getElementById('fileRecipient');
+
+            membersList.innerHTML = '';
+            fileRecipient.innerHTML = '<option value="">-- Chọn người nhận --</option>';
+
+            for (const [userId, member] of Object.entries(roomMembers)) {
+                const memberDiv = document.createElement('div');
+                memberDiv.className = 'member-item';
+                memberDiv.innerHTML = `
+                    <div class="member-name">${member.username}</div>
+                    <div class="member-status">🟢 Trực tuyến</div>
+                `;
+                membersList.appendChild(memberDiv);
+
+                const option = document.createElement('option');
+                option.value = userId;
+                option.textContent = member.username;
+                fileRecipient.appendChild(option);
+            }
+        }
+
+        // Xử lý phím Enter trong chat
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Chuyển tab
+        function switchTab(tabName) {
+            // Ẩn tất cả tab
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Hiển thị tab được chọn
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+            showStatus('✅ Đã copy vào clipboard!', 'success');
+        }
+
+        // Tải xuống khóa
+        function downloadKeys() {
+            const publicKey = document.getElementById('publicKey').value;
+            const privateKey = document.getElementById('privateKey').value;
+
+            if (!publicKey || !privateKey) {
+                showStatus('❌ Chưa có khóa để tải xuống', 'error');
+                return;
+            }
+
+            const keys = {
+                publicKey: publicKey,
+                privateKey: privateKey,
+                generated: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(keys, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rsa-keys.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showStatus('✅ Đã tải xuống khóa!', 'success');
+        }
+
+        // Xử lý file
+        function handleFileDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const fileUpload = document.getElementById('fileUpload');
+            fileUpload.classList.remove('dragover');
+
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('fileUpload').classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('fileUpload').classList.remove('dragover');
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            showStatus(`Đã chọn file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+        }
+
+        // Click vào file upload area
+        document.getElementById('fileUpload').addEventListener('click', function () {
+            document.getElementById('fileInput').click();
+        });
+
+        // Mã hóa và gửi file
+        async function encryptAndSendFile() {
+            const fileInput = document.getElementById('fileInput');
+            const recipientSelect = document.getElementById('fileRecipient');
+
+            if (!fileInput.files.length) {
+                showStatus('❌ Vui lòng chọn file', 'error');
+                return;
+            }
+
+            if (!recipientSelect.value) {
+                showStatus('❌ Vui lòng chọn người nhận', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const recipientId = recipientSelect.value;
+            const recipient = roomMembers[recipientId];
+
+            if (!recipient) {
+                showStatus('❌ Không tìm thấy người nhận', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Đang mã hóa file...', 'info');
+
+                // Đọc file
+                const fileContent = await readFileAsBase64(file);
+
+                // Mã hóa file content
+                const response = await fetch('/api/encrypt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: fileContent,
+                        public_key: recipient.public_key
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Gửi file đã mã hóa qua socket
+                    socket.emit('send_message', {
+                        type: 'file',
+                        content: {
+                            filename: file.name,
+                            size: file.size,
+                            type: file.type,
+                            encrypted_content: data.encrypted_text,
+                            recipient: recipientId
+                        }
+                    });
+
+                    showStatus(`✅ Đã gửi file "${file.name}" đã mã hóa cho ${recipient.username}`, 'success');
+
+                    // Reset form
+                    fileInput.value = '';
+                    recipientSelect.value = '';
+                } else {
+                    showStatus(`❌ Lỗi mã hóa file: ${data.error}`, 'error');
+                }
+
+            } catch (error) {
+                showStatus(`❌ Lỗi xử lý file: ${error.message}`, 'error');
+            }
+        }
+
+        // Đọc file thành base64
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Loại bỏ prefix data:...;base64,
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Hiển thị trạng thái
+        function showStatus(message, type) {
+            // Tạo hoặc cập nhật status element
+            let statusDiv = document.querySelector('.status:not(.hidden)');
+            if (!statusDiv) {
+                statusDiv = document.createElement('div');
+                statusDiv.className = 'status';
+                document.querySelector('.container').appendChild(statusDiv);
+            }
+
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+
+            // Tự động ẩn sau 5 giây
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Khởi tạo khi trang load
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚀 Ứng dụng mã hóa RSA đã sẵn sàng!');
+
+            // Tự động tạo khóa khi load trang
+            setTimeout(generateKeys, 1000);
+
+            // Khởi tạo Socket.IO
+            initSocket();
+        });
+    </script>
+</body>
+
+</html>
